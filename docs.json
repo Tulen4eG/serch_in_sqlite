@@ -1,0 +1,217 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Поисковик данных SQLite",
+    "description": "Сервис для поиска по базе данных SQLite",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/delete/{post_id}": {
+      "delete": {
+        "tags": [
+          "delete"
+        ],
+        "summary": "Удаление поста",
+        "description": "Удаление поста по его ID.\n\n- **param post_id**: ID поста для удаления.",
+        "operationId": "delete_post_delete__post_id__delete",
+        "parameters": [
+          {
+            "name": "post_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Post Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletePostSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search/search": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Поиск постов по тексту",
+        "description": "Поиск постов по тексту с использованием Elasticsearch и SQLite.\nВозвращает список постов, соответствующих запросу.\n\n- **param query**: Строка запроса для поиска.",
+        "operationId": "search_posts_search_search_get",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Query"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PostsSchema"
+                  },
+                  "title": "Response Search Posts Search Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DeletePostSchema": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Сообщение об успешном удалении",
+            "example": "Пост с ID 5 успешно удален."
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "DeletePostSchema"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "PostsSchema": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "ID поста",
+            "description": "Уникальный идентификатор поста в базе данных"
+          },
+          "rubrics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Рубрики",
+            "description": "Список рубрик, к которым относится текст"
+          },
+          "text": {
+            "type": "string",
+            "title": "Текст",
+            "description": "Текст, по которому будет осуществляться поиск"
+          },
+          "created_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Дата создания",
+            "description": "Дата создания текста в формате YYYY-MM-DD HH:MM:SS"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "rubrics",
+          "text",
+          "created_date"
+        ],
+        "title": "Модель данных с постами",
+        "example": {
+          "created_date": "2019-07-25 12:42:13",
+          "id": 1,
+          "rubrics": [
+            "VK-1603736028819866",
+            "VK-11879320040",
+            "VK-63192684938"
+          ],
+          "text": "Пример текста"
+        }
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
