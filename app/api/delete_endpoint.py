@@ -1,3 +1,8 @@
+"""
+Модуль обработки API-запросов для удаления документов из системы.
+Обеспечивает консистентность данных между SQLite и Elasticsearch.
+"""
+
 from elasticsearch import (
     ApiError,
     ConnectionError as ESConnectionError,

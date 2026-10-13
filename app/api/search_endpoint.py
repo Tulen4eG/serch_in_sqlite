@@ -1,3 +1,8 @@
+"""
+Модуль обработки API-запросов для полнотекстового поиска постов.
+Включает интеграцию с Elasticsearch и валидацию ответов.
+"""
+
 from typing import List
 
 from elasticsearch import (

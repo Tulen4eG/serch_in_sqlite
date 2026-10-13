@@ -1,9 +1,18 @@
+"""
+Модуль Pydantic-схем для валидации входящих и исходящих данных API.
+Обеспечивает строгое соответствие типов при сериализации в JSON.
+"""
+
 from datetime import datetime as dt
 
 from pydantic import BaseModel, Field, ConfigDict, field_serializer
 
 
 class PostsSchema(BaseModel):
+    """
+    Схема для полной репрезентации поста в ответах API.
+    """
+
     id: int = Field(
         title="ID поста",
         description="Уникальный идентификатор поста в базе данных",
@@ -48,6 +57,10 @@ class PostsSchema(BaseModel):
 
 
 class DeletePostSchema(BaseModel):
+    """
+    Схема ответа при успешном удалении записи из системы.
+    """
+
     message: str = Field(
         title="Сообщение об успешном удалении",
         example="Пост с ID 5 успешно удален."

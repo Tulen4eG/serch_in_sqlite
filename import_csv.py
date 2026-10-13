@@ -1,3 +1,17 @@
+"""
+Модуль инициализации данных и синхронизации поисковых индексов.
+
+Выполняет три последовательные задачи при старте контейнера:
+1. Скачивает исходный массив данных
+в формате CSV с публичного Яндекс.Диска.
+
+2. Парсит CSV через Pandas и заливает данные
+в реляционную БД SQLite (только если она пуста).
+
+3. Синхронизирует и индексирует текстовые поля документов
+в Elasticsearch через Bulk API.
+"""
+
 import ast
 import json
 import logging
@@ -23,6 +37,7 @@ logger = logging.getLogger(__name__)
 CSV_FILE_PATH = "posts.csv"
 ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
 INDEX_NAME = "posts_index"
+# Маппинг индекса: явно подключаем встроенный русский аналайзер
 INDEX_MAPPINGS = {
     "properties": {
         "id": {"type": "integer"},
@@ -32,11 +47,19 @@ INDEX_MAPPINGS = {
 
 
 def sqlite_url() -> str:
+    """
+    Удаляет префикс асинхронного драйвера 'aiosqlite',
+    так как Pandas работает только в синхронном режиме.
+    """
     raw_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./fastapi.db")
     return raw_url.replace("sqlite+aiosqlite", "sqlite")
 
 
 def download_yandex_disk_file(save_path: str) -> None:
+    """
+    Запрашивает прямую ссылку на скачивание через REST API Яндекс.Диска
+    и скачивает публичный файл потоковым методом (stream=True).
+    """
     public_url = "https://disk.360.yandex.ru/d/UYooXd9q2yqTMQ"
     base_api_url = (
         "https://cloud-api.yandex.net/v1/disk/public/resources/download?"
@@ -44,7 +67,6 @@ def download_yandex_disk_file(save_path: str) -> None:
     request_url = base_api_url + urllib.parse.urlencode(
         {"public_key": public_url}
     )
-    logger.info(request_url)
 
     try:
         response = requests.get(request_url, timeout=30)
@@ -56,7 +78,8 @@ def download_yandex_disk_file(save_path: str) -> None:
             return
 
         logger.info("Скачивание файла...")
-        with requests.get(download_url, stream=True, timeout=120) as file_response:
+        with requests.get(
+                download_url, stream=True, timeout=120) as file_response:
             file_response.raise_for_status()
             with open(save_path, "wb") as f:
                 for chunk in file_response.iter_content(chunk_size=8192):
@@ -69,6 +92,9 @@ def download_yandex_disk_file(save_path: str) -> None:
 
 
 def convert_to_python_list(val):
+    """
+    Безопасно преобразует строковое представление списка из CSV.
+    """
     if isinstance(val, list):
         return json.dumps(val, ensure_ascii=False)
     try:
@@ -81,6 +107,9 @@ def convert_to_python_list(val):
 
 
 def posts_count(engine) -> int:
+    """
+    Возвращает текущее количество записей в таблице 'posts'.
+    """
     with engine.connect() as conn:
         return int(
             conn.execute(text("SELECT COUNT(*) FROM posts")).scalar() or 0
@@ -88,21 +117,34 @@ def posts_count(engine) -> int:
 
 
 def load_sqlite(engine) -> None:
+    """
+    Выполняет чтение CSV-выгрузки, очистку типов данных через Pandas
+    и пакетную вставку (to_sql) в базу данных SQLite.
+    """
     logger.info("Читаю CSV...")
     df = pd.read_csv(CSV_FILE_PATH)
+    # Модифицируем колонки под типы данных в SQLAlchemy-модели
     df["rubrics"] = df["rubrics"].apply(convert_to_python_list)
     df["created_date"] = pd.to_datetime(df["created_date"])
     logger.info("Записываю %s строк в SQLite...", len(df))
+    # 'append' допишет строки, если таблица существует, или создаст её
     df.to_sql(name="posts", con=engine, if_exists="append", index=False)
 
 
 def ensure_index(es: Elasticsearch) -> None:
+    """
+    Идемпотентная проверка существования поискового индекса в Elasticsearch.
+    Создает индекс с русским аналайзером, если его не было.
+    """
     if es.indices.exists(index=INDEX_NAME):
         return
     es.indices.create(index=INDEX_NAME, mappings=INDEX_MAPPINGS)
 
 
 def es_doc_count(es: Elasticsearch) -> int:
+    """
+    Возвращает количество проиндексированных документов в Elasticsearch.
+    """
     if not es.indices.exists(index=INDEX_NAME):
         return 0
     stats = es.count(index=INDEX_NAME)
@@ -110,11 +152,16 @@ def es_doc_count(es: Elasticsearch) -> int:
 
 
 def reindex_from_sqlite(engine, es: Elasticsearch) -> None:
+    """
+    Выгружает идентификаторы и тексты из SQLite и производит
+    высокопроизводительную bulk-индексацию документов в Elasticsearch.
+    """
     db_data = pd.read_sql("SELECT id, text FROM posts", con=engine)
     if db_data.empty:
         return
 
     ensure_index(es)
+
     actions = (
         {
             "_index": INDEX_NAME,
@@ -128,7 +175,7 @@ def reindex_from_sqlite(engine, es: Elasticsearch) -> None:
     )
     success, errors = bulk(es, actions, raise_on_error=False)
     if errors:
-        logger.warning("Ошибки bulk-индексации: %s", errors[:5])
+        logger.warning("Ошибки bulk-индексации: %s", errors)
     logger.info("Проиндексировано %s документов в Elasticsearch.", success)
 
 
@@ -165,6 +212,7 @@ def main():
     if es.indices.exists(index=INDEX_NAME):
         es.indices.delete(index=INDEX_NAME)
     reindex_from_sqlite(engine, es)
+    logger.info("Инициализация и синхронизация данных успешно завершена.")
 
 
 if __name__ == "__main__":

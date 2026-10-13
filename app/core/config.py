@@ -1,3 +1,10 @@
+"""
+Модуль конфигурации приложения.
+
+Использует pydantic-settings для сбора переменных окружения из файла .env
+с валидацией типов и дефолтными значениями для локальной разработки.
+"""
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
