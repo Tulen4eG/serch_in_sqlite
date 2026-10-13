@@ -1,9 +1,9 @@
-from sqlalchemy import Column, String, JSON
+from sqlalchemy import Column, JSON, Text, DateTime
 
 from app.core import Base
 
 
 class Posts(Base):
     rubrics = Column(JSON, nullable=False)
-    text = Column(String(250), nullable=False)
-    created_date = Column(String(19), nullable=False)
+    text = Column(Text, nullable=False)
+    created_date = Column(DateTime, nullable=False)

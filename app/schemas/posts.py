@@ -1,6 +1,6 @@
 from datetime import datetime as dt
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_serializer
 
 
 class PostsSchema(BaseModel):
@@ -20,6 +20,14 @@ class PostsSchema(BaseModel):
         title="Дата создания",
         description="Дата создания текста в формате YYYY-MM-DD HH:MM:SS",
     )
+
+    @field_serializer('created_date')
+    def serialize_dt(self, created_date: dt) -> str:
+        """
+        Конвертирует datetime в строку с пробелом вместо 'T'
+        в момент отправки JSON-ответа пользователю.
+        """
+        return created_date.strftime("%Y-%m-%d %H:%M:%S")
 
     model_config = ConfigDict(
         title="Модель данных с постами",

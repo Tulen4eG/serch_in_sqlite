@@ -74,6 +74,7 @@ def main():
     df = pd.read_csv(CSV_FILE_PATH)
 
     df["rubrics"] = df["rubrics"].apply(convert_to_json)
+    df["created_date"] = pd.to_datetime(df["created_date"], errors="coerce")
 
     print("2. Записываю данные в SQLite...")
     engine = create_engine(DB_URL)
