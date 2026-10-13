@@ -7,6 +7,8 @@ services:
       - xpack.security.enabled=false
     ports:
       - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
     healthcheck:
       test: ["CMD-SHELL", "sh -c '</dev/tcp/localhost/9200' || exit 1"]
       interval: 10s
@@ -21,23 +23,23 @@ services:
     environment:
       - DATABASE_URL=sqlite+aiosqlite:////code/db/fastapi.db
       - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_INDEX=posts_index
     volumes:
       - sqlite_data:/code/db
     depends_on:
       elasticsearch:
         condition: service_healthy
-    command: sh -c "python -m alembic revision --autogenerate -m 'First migration' && python -m alembic upgrade head && python import_csv.py"
+    command: sh -c "python -m alembic upgrade head && python import_csv.py"
 
   web:
     build: .
     container_name: fastapi_web
     ports:
       - "8000:8000"
-    dns:
-      - 8.8.8.8
     environment:
       - DATABASE_URL=sqlite+aiosqlite:////code/db/fastapi.db
       - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_INDEX=posts_index
     volumes:
       - sqlite_data:/code/db
     depends_on:
@@ -47,3 +49,4 @@ services:
 
 volumes:
   sqlite_data:
+  es_data:

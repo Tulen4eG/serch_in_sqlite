@@ -12,7 +12,7 @@
           "delete"
         ],
         "summary": "Удаление поста",
-        "description": "Удаление поста по его ID.\n\n- **param post_id**: ID поста для удаления.",
+        "description": "Удаляет документ из SQLite и из индекса Elasticsearch по id.\n\n- **param post_id**: ID поста для удаления.",
         "operationId": "delete_post_delete__post_id__delete",
         "parameters": [
           {
@@ -36,6 +36,26 @@
               }
             }
           },
+          "404": {
+            "description": "Объект не найден в базе данных SQLite",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Пост с id 42 не найден!"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Поисковый сервис (Elasticsearch) недоступен",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Поисковый сервис временно недоступен"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -49,14 +69,14 @@
         }
       }
     },
-    "/search/search": {
+    "/search": {
       "get": {
         "tags": [
           "search"
         ],
         "summary": "Поиск постов по тексту",
-        "description": "Поиск постов по тексту с использованием Elasticsearch и SQLite.\nВозвращает список постов, соответствующих запросу.\n\n- **param query**: Строка запроса для поиска.",
-        "operationId": "search_posts_search_search_get",
+        "description": "Поиск постов по тексту с использованием Elasticsearch и SQLite.\nВозвращает до 20 записей со всеми полями БД, от новых к старым.\n\n- **param query**: Строка запроса для поиска.",
+        "operationId": "search_posts_search_get",
         "parameters": [
           {
             "name": "query",
@@ -64,8 +84,11 @@
             "required": true,
             "schema": {
               "type": "string",
+              "minLength": 1,
+              "description": "Текстовый запрос",
               "title": "Query"
-            }
+            },
+            "description": "Текстовый запрос"
           }
         ],
         "responses": {
@@ -78,10 +101,13 @@
                   "items": {
                     "$ref": "#/components/schemas/PostsSchema"
                   },
-                  "title": "Response Search Posts Search Search Get"
+                  "title": "Response Search Posts Search Get"
                 }
               }
             }
+          },
+          "503": {
+            "description": "Elasticsearch недоступен"
           },
           "422": {
             "description": "Validation Error",
@@ -148,7 +174,6 @@
           },
           "created_date": {
             "type": "string",
-            "format": "date-time",
             "title": "Дата создания",
             "description": "Дата создания текста в формате YYYY-MM-DD HH:MM:SS"
           }
