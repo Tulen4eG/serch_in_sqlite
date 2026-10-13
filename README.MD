@@ -2,6 +2,21 @@
 
 Проект представляет собой асинхронное веб-приложение на базе **FastAPI**, реализующее систему хранения постов и полнотекстового поиска по их текстовому содержимому с использованием **Elasticsearch** и морфологического анализатора для русского языка.
 
+<details>
+  <summary>Нажмите, чтобы посмотреть картинку (delete api)</summary>
+  <img src="./readme_images/delete_api.png" alt="Изображение delete_api.png">
+</details>
+
+<details>
+  <summary>Нажмите, чтобы посмотреть картинку (search api)</summary>
+  <img src="./readme_images/search_api.png" alt="Изображение search_api.png">
+</details>
+
+<details>
+  <summary>Нажмите, чтобы посмотреть картинку (redoc)</summary>
+  <img src="./readme_images/redoc.png" alt="Изображение redoc.png">
+</details>
+
 ---
 
 ## Запуск
