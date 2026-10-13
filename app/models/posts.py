@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, JSON
 
-from app.core.db import Base
+from app.core import Base
 
 
 class Posts(Base):

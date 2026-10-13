@@ -1,16 +1,17 @@
-import os
+import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from elasticsearch import AsyncElasticsearch, NotFoundError
+from elasticsearch import NotFoundError
 from typing import List
 
+from app.core import settings, es_client
 from app.models import Posts
 
 
-ELASTIC_URL = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
-es_client = AsyncElasticsearch(ELASTIC_URL)
-INDEX_NAME = "posts_index"
+logger = logging.getLogger(__name__)
+
+ES_SEARCH_SIZE = 1500
 
 
 class CRUDPosts:
@@ -19,27 +20,36 @@ class CRUDPosts:
         Удаляет переданный объект из базы данных.
         """
         await session.delete(db_obj)
-        await session.commit()
+        await session.flush()
         try:
-            await es_client.delete(index=INDEX_NAME, id=str(db_obj.id))
-            print(f"Документ {db_obj.id} успешно удален из Elasticsearch.")
+            await es_client.delete(
+                index=settings.elasticsearch_index,
+                id=str(db_obj.id)
+            )
         except NotFoundError:
-            print(f"Предупреждение: Id {db_obj.id} не найден в Elasticsearch.")
+            logger.warning(
+                "Документ %s удалён из БД, в Elasticsearch его не было",
+                db_obj.id,
+            )
+        except Exception:
+            await session.rollback()
+            logger.exception(
+                "Не удалось удалить документ %s из Elasticsearch",
+                db_obj.id,
+            )
+            raise
+        await session.commit()
         return db_obj
 
     async def search(self, query: str, session: AsyncSession) -> List[Posts]:
         """
         Полнотекстовый поиск по Elasticsearch с получением
-        полных и отсортированных данных из SQLite.
+        до 20 новейших и отсортированных по дате постов из SQLite.
         """
         es_result = await es_client.search(
-            index=INDEX_NAME,
-            query={
-                "match": {
-                    "text": query
-                }
-            },
-            size=1500,
+            index=settings.elasticsearch_index,
+            query={"match": {"text": query}},
+            size=ES_SEARCH_SIZE,
         )
 
         hits = es_result["hits"]["hits"]

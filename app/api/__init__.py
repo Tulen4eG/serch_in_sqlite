@@ -11,7 +11,6 @@ main_router.include_router(
     tags=["delete"])
 main_router.include_router(
     search_router,
-    prefix="/search",
     tags=["search"]
 )
 
